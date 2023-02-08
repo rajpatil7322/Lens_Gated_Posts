@@ -11,11 +11,12 @@ import {
   FormLabel,
   FormErrorMessage,
   FormHelperText,
-  Box, Button,Input,Lin 
+  Box, Button,Input,Textarea 
 } from '@chakra-ui/react'
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from "wagmi"
 import {getChallenge,Authenticate,getProfile} from "./utils";
+import {lens_abi} from "./abi/lenshub";
 
 
 
@@ -24,8 +25,11 @@ export default function Home() {
   const[contentURI,setContentURI]=useState();
   const[profileId,setProfileID]=useState("");
   const[handle,setHandle]=useState("");
+  const[follownNFTAddress,setFollowNFTAddress]=useState();
 
-  const APIURL = 'https://api-mumbai.lens.dev/';
+  const[post,setPost]=useState("");
+
+  const APIURL = "https://api-mumbai.lens.dev/playground";
 
   const { address } = useAccount();
 
@@ -36,14 +40,16 @@ export default function Home() {
     const response=await getProfile(address);
     if(!response.data.defaultProfile){
       console.log("You dont have profile");
+      
 
     }else{
       console.log("Success!!!!")
-      setProfileID(response.data.defaultProfile.id);
-      setHandle(response.data.defaultProfile.handle)
       const provider = new ethers.providers.Web3Provider(window.ethereum)
       await provider.send("eth_requestAccounts", []);
-      const signer = provider.getSigner() 
+      const signer = provider.getSigner()
+      console.log(response.data.defaultProfile)
+      console.log(parseInt(response.data.defaultProfile.id))
+
       await getChallenge(address).then(async(data)=>{
         return await signer.signMessage(data)
       }).then(async(sig) =>{
@@ -54,38 +60,49 @@ export default function Home() {
           accessToken, refreshToken,
         }))
       })
-    
+      setProfileID(response.data.defaultProfile.id);
+      setHandle(response.data.defaultProfile.handle)
+      setFollowNFTAddress(response.data.defaultProfile.followNftAddress);
     }
   }
 
  
   
 
-  let accessCondition = {
-    contractAddress:"0x0DcF37Fc2000388e348Ed2252De7d6A5C00199E5",
-    chainID: 80001
-  }
-  let condition = {}
+ 
 
 
 
-  const metadata = {
-    version: '2.0.0',
-    content: "I love you",
-    description: "This is a gated post!",
-    name: `Post by @${handle}`,
-    external_url: `https://lenster.xyz/u/${handle}`,
-    metadata_id: uuid(),
-    mainContentFocus: 'TEXT_ONLY',
-    attributes: [],
-    locale: 'en-US',
-  }
+  
   // console.log(ethers.utils.hexZeroPad(ethers.utils.hexlify(27164)))
 
   async function gate(){
+    // console.log(follownNFTAddress)
+    // console.log(parseInt(profileId))
+    // console.log(handle)
+    // console.log(post)
+    const metadata = {
+      version: '2.0.0',
+      content: post,
+      description: "This is a gated post!",
+      name: `Post by @${handle}`,
+      external_url: `https://lenster.xyz/u/${handle}`,
+      metadata_id: uuid(),
+      mainContentFocus: 'TEXT_ONLY',
+      attributes: [],
+      locale: 'en-US',
+    }
+
     const provider = new ethers.providers.Web3Provider(window.ethereum)
     await provider.send("eth_requestAccounts", []);
     const signer = provider.getSigner()
+
+    let accessCondition = {
+      contractAddress:follownNFTAddress,
+      chainID: 80001
+    }
+    let condition = {}
+
     const sdk = await LensGatedSDK.create({
       provider: new ethers.providers.Web3Provider(window.ethereum),
       signer: provider.getSigner(),
@@ -102,6 +119,7 @@ export default function Home() {
        ...condition
       },
       async function(EncryptedMetadata) {
+        // your ipfs function to add data
         return EncryptedMetadata
       },)
       setContentURI(contentURI)
@@ -120,14 +138,30 @@ export default function Home() {
     const { decrypted } = await sdk.gated.decryptMetadata(contentURI)
     console.log({ decrypted })
   }
+
+  let handleInputChange = (e) => {
+    let inputValue = e.target.value
+    setPost(inputValue)
+  }
   return (
     <div>
       <Box>
       <ConnectButton/>
       </Box>
-      <Button onClick={() =>Login()}>Login</Button>
-      {/* <button onClick={() =>gate()}>Gate</button>
-      <button onClick={() =>decrypt()}>Decrypt</button> */}
+      {!profileId ? 
+      <Button onClick={() =>Login()}>Login</Button>:
+      <div>
+        <h1>Post Tweet</h1>
+        <Textarea
+        value={post}
+        onChange={handleInputChange}
+        size='sm'
+      />
+      <Button onClick={() =>gate()}>POST</Button>
+      </div>
+      }
+      
+      
 
     </div>
   )

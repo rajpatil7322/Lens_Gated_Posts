@@ -2,7 +2,7 @@ import { createClient } from 'urql'
 import { challenge, getDefaultProfile } from "./queries";
 import { authenticate } from './mutations'
 
-const APIURL = 'https://api-mumbai.lens.dev/';
+const APIURL = "https://api-mumbai.lens.dev/playground";
 
 export const urqlClient = createClient({
     url: APIURL,
